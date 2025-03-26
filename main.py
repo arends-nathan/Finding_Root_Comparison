@@ -90,21 +90,45 @@ def plot_convergence_graphs(x_vals, fx_vals, method_name, fname, subplot_positio
 
 def calculate_convergence_rate(x_vals):
     """
-    Calculate the empirical convergence rate using consecutive errors
+    Calculate the empirical convergence rate using consecutive errors in the iteration sequence.
     
-    For a sequence converging to x*, the convergence rate p can be estimated by:
-    |e_{n+1}| ≈ C|e_n|^p, where e_n = x_n - x*
+    For a sequence {x_n} converging to x*, the convergence rate p can be estimated by:
+    |e_{n+1}| ≈ C|e_n|^p, where:
+        - e_n = x_n - x* is the error at iteration n
+        - C is some constant
+        - p is the convergence rate we're estimating
     
-    Since we don't know x* exactly, we use the final value as an approximation
+    Taking logarithms: log(|e_{n+1}|) ≈ log(C) + p*log(|e_n|)
+    So p ≈ log(|e_{n+1}|)/log(|e_n|) as n gets large.
+    
+    Parameters:
+    -----------
+    x_vals : list
+        A sequence of x values from an iterative root-finding method, 
+        assumed to be converging to a root.
+        
+    Returns:
+    --------
+    float or str
+        The estimated convergence rate if sufficient data is available.
+        Returns "Insufficient data" if there aren't enough points for a reliable estimate.
+        
+    Notes:
+    ------
+    - A rate close to 1 indicates linear convergence (typical of bisection method)
+    - A rate close to 2 indicates quadratic convergence (typical of Newton's method)
+    - A rate close to 1.618 indicates superlinear convergence (typical of secant method)
+    - We use the final value in x_vals as an approximation of the true root x*
     """
     if len(x_vals) < 4:  # Need at least 4 points to estimate rate
         return "Insufficient data"
     
     # Use the last value as approximation of x*
     x_star = x_vals[-1]
+    # Calculate errors for each iteration relative to our approximated root
     errors = [abs(x - x_star) for x in x_vals[:-1]]
     
-    # Avoid log(0) errors by filtering out very small or zero errors
+    # Filter out very small errors to avoid numerical instability and log(0) errors
     filtered_errors = [(errors[i], errors[i+1]) 
                       for i in range(len(errors)-1) 
                       if errors[i] > 1e-10 and errors[i+1] > 1e-10]
@@ -112,11 +136,12 @@ def calculate_convergence_rate(x_vals):
     if len(filtered_errors) < 3:
         return "Insufficient data"
     
-    # Calculate convergence rates for consecutive iterations
+    # Calculate convergence rates using the formula p ≈ log(|e_{n+1}|)/log(|e_n|)
     rates = [math.log(e2) / math.log(e1) if e1 != 1 else 0 
              for e1, e2 in filtered_errors]
     
-    # Return the average of the last few rates (more stable)
+    # Return the average of the last few rates for more stability
+    # (early iterations may not yet exhibit the asymptotic behavior)
     return sum(rates[-3:]) / len(rates[-3:]) if rates else "Insufficient data"
 
 def main() -> None:
